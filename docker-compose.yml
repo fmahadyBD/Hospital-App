@@ -1,0 +1,69 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-dev-data:/var/lib/mysql
+    networks:
+      - hospital-app-dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mail-dev:
+    container_name: mail-dev-bs
+    image: maildev/maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - hospital-app-dev
+
+  backend:
+    container_name: hospital-services-dev
+    image: maven:3.9.6-eclipse-temurin-17  # Use Maven image directly
+    working_dir: /app
+    env_file: .env
+    ports:
+      - "8090:8080"
+      - "5005:5005"
+    volumes:
+      - ./hospital-services:/app
+      - maven-cache:/root/.m2
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: mvn spring-boot:run  # Simple command
+    networks:
+      - hospital-app-dev
+
+  frontend:
+    container_name: hospital-ui-dev
+    build: ./hospital-ui
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./hospital-ui:/app          # 🔥 HOT RELOAD
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - hospital-app-dev
+
+networks:
+  hospital-app-dev:
+    driver: bridge
+
+volumes:
+  mysql-dev-data:
+  maven-cache:
