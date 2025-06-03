@@ -1,0 +1,59 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-prod-data:/var/lib/mysql
+    networks:
+      - hospital-app-prod
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  backend:
+    container_name: hospital-services-prod
+    build:
+      context: ./hospital-services
+      dockerfile: Dockerfile.prod
+    env_file: .env.prod
+    ports:
+      - "8090:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - hospital-app-prod
+    restart: unless-stopped
+    # NO VOLUMES = NO HOT RELOAD (Production)
+
+  frontend:
+    container_name: hospital-ui-prod
+    build:
+      context: ./hospital-ui
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - hospital-app-prod
+    restart: unless-stopped
+    # NO VOLUMES = NO HOT RELOAD (Production)
+
+networks:
+  hospital-app-prod:
+    driver: bridge
+
+volumes:
+  mysql-prod-data:

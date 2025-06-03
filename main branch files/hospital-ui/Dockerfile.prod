@@ -1,0 +1,14 @@
+# Production Dockerfile - OPTIMIZED, NO HOT RELOAD
+# Build stage
+FROM node:22.16.0-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build --prod
+
+# Runtime stage
+FROM nginx:alpine
+COPY --from=build /app/dist/hospital-ui /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
