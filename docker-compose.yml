@@ -53,6 +53,9 @@ services:
     build: ./hospital-ui
     ports:
       - "4200:4200"
+    volumes:
+      - ./hospital-ui:/app          # Maps your local code to container
+      - /app/node_modules           # Preserves container's node_modules
     depends_on:
       - backend
     networks:
